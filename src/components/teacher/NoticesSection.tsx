@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type Key } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,7 @@ interface Notice {
   status: NoticeStatus | string
   publishDate?: string | null
   createdAt?: string
+  teacherEmail?: string
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -40,6 +42,8 @@ async function readJsonOrText(res: Response) {
 }
 
 export function NoticesSection() {
+  const { data: session } = useSession()
+  const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
   const NOTICE_WEBHOOK_URL = 'https://tkb32.app.n8n.cloud/webhook/notice-upload'
 
@@ -78,7 +82,11 @@ export function NoticesSection() {
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
     try {
-      const res = await fetch(`${BACKEND_URL}/notices`, { signal: controller.signal })
+      const url = teacherEmail
+        ? `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(teacherEmail)}`
+        : `${BACKEND_URL}/notices`
+
+      const res = await fetch(url, { signal: controller.signal })
       const { raw, json } = await readJsonOrText(res)
       if (!res.ok) {
         throw new Error(`Failed to fetch notices (${res.status}): ${raw || res.statusText}`)
@@ -99,7 +107,7 @@ export function NoticesSection() {
   useEffect(() => {
     fetchNotices()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [BACKEND_URL])
+  }, [BACKEND_URL, teacherEmail])
 
   const handleFormChange = (field: 'title' | 'content' | 'category' | 'priority', value: string) => {
     setFormData(p => ({ ...p, [field]: value }))
@@ -209,6 +217,7 @@ export function NoticesSection() {
             category: formData.category,
             priority: formData.priority,
             status: 'draft',
+            teacherEmail: teacherEmail || '',
           }),
         })
 

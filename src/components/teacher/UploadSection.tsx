@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { useDropzone } from 'react-dropzone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,8 @@ interface UploadedFile {
 }
 
 export function UploadSection() {
+  const { data: session } = useSession()
+  const teacherEmail = session?.user?.email || ''
   const WEBHOOK_URL = 'https://tkb32.app.n8n.cloud/webhook/file-upload'
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
 
@@ -89,6 +92,9 @@ export function UploadSection() {
       const formData = new FormData();
       formData.append('file', fileToUpload);
       formData.append('category', category);
+      if (teacherEmail) {
+        formData.append('teacherEmail', teacherEmail);
+      }
 
       try {
         const response = await fetch('/api/upload-file', {
@@ -130,7 +136,7 @@ export function UploadSection() {
         );
       }
     }
-  }, [category]);
+  }, [category, teacherEmail]);
 
   const handlePublishNotice = async () => {
     if (!noticeTitle || !noticeContent) {
@@ -142,7 +148,13 @@ export function UploadSection() {
       const response = await fetch(`${BACKEND_URL.replace(/\/$/, '')}/notices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: noticeTitle, content: noticeContent, category, status: 'published' }),
+        body: JSON.stringify({ 
+          title: noticeTitle, 
+          content: noticeContent, 
+          category, 
+          status: 'published',
+          teacherEmail: teacherEmail || ''
+        }),
       });
       if (!response.ok) { throw new Error('Failed to publish notice'); }
       alert('Notice published successfully!');

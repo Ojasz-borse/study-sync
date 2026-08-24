@@ -6,11 +6,23 @@ export default () => async (req, res) => {
   if (req.method === 'GET') {
     try {
       const client = await clientPromise;
-      const db = client.db(process.env.DB_NAME);
+      const db = client.db(process.env.DB_NAME || process.env.MONGODB_DB || 'StudySyncDB');
+      const { teacherEmail } = req.query || {};
+
+      let query = {};
+      if (teacherEmail) {
+        query = {
+          $or: [
+            { teacherEmail: teacherEmail },
+            { teacherEmail: { $exists: false } },
+            { teacherEmail: '' }
+          ]
+        };
+      }
 
       const notices = await db
         .collection("notices")
-        .find({})
+        .find(query)
         .sort({ createdAt: -1 })
         .toArray();
 
@@ -21,14 +33,14 @@ export default () => async (req, res) => {
     }
   } else if (req.method === 'POST') {
     try {
-      const { title, content, category, status, priority } = req.body;
+      const { title, content, category, status, priority, teacherEmail } = req.body;
 
       if (!title || !content) {
         return res.status(400).json({ error: "Title and content are required" });
       }
 
       const client = await clientPromise;
-      const db = client.db(process.env.DB_NAME);
+      const db = client.db(process.env.DB_NAME || process.env.MONGODB_DB || 'StudySyncDB');
 
       const newNotice = {
         title,
@@ -36,8 +48,9 @@ export default () => async (req, res) => {
         category: category || "general",
         priority: priority || "medium",
         status: status || "draft",
+        teacherEmail: teacherEmail || '',
         createdAt: new Date(),
-        publishDate: null,
+        publishDate: status === 'published' ? new Date() : null,
         views: 0,
       };
 

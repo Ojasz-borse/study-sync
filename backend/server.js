@@ -108,6 +108,40 @@ app.delete('/materials', async (req, res) => {
   }
 });
 
+// Lazy-load students handler
+app.get('/students', async (req, res) => {
+  try {
+    const { default: makeHandler } = await import('./src/api/students/route.js');
+    const handler = makeHandler();
+    await handler(req, res);
+  } catch (error) {
+    console.error('Error loading students handler:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/students', async (req, res) => {
+  try {
+    const { default: makeHandler } = await import('./src/api/students/route.js');
+    const handler = makeHandler();
+    await handler(req, res);
+  } catch (error) {
+    console.error('Error loading students handler:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/students/:id', async (req, res) => {
+  try {
+    const { default: makeHandler } = await import('./src/api/students/route.js');
+    const handler = makeHandler();
+    await handler(req, res);
+  } catch (error) {
+    console.error('Error loading students delete handler:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Lazy-load notices handler (used for GET and POST)
 app.get('/notices', async (req, res) => {
   try {

@@ -5,6 +5,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const file = formData.get('file');
     const category = formData.get('category');
+    const teacherEmail = formData.get('teacherEmail');
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -16,7 +17,11 @@ export async function POST(request) {
     // Forward to backend
     const backendFormData = new FormData();
     backendFormData.append('file', file);
-    backendFormData.append('category', category);
+    backendFormData.append('category', category || 'general');
+    if (teacherEmail) {
+      backendFormData.append('teacherEmail', teacherEmail);
+      backendFormData.append('uploadedBy', teacherEmail);
+    }
 
     const fullUrl = `${backendUrl.replace(/\/$/, '')}/upload-file`;
     console.log('Fetching backend URL:', fullUrl);

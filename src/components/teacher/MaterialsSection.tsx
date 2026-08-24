@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,9 +33,12 @@ interface Material {
   downloads: number
   views: number
   fileURL: string
+  teacherEmail?: string
 }
 
 export function MaterialsSection() {
+  const { data: session } = useSession()
+  const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -65,10 +69,11 @@ export function MaterialsSection() {
       const timeoutMs = process.env.NODE_ENV === 'development' ? 10000 : 30000
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-      const response = await fetch(
-        `${BACKEND_URL}/materials`,
-        { signal: controller.signal }
-      )
+      const url = teacherEmail
+        ? `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(teacherEmail)}`
+        : `${BACKEND_URL}/materials`
+
+      const response = await fetch(url, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (!response.ok) {
         let details = ''

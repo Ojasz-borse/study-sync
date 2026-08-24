@@ -37,12 +37,24 @@ export default () => async (req, res) => {
       const dbName = process.env.DB_NAME || process.env.MONGODB_DB || 'studysync';
       const materialsCollection = process.env.COLLECTION_NAME || 'materials';
       const db = client.db(dbName);
+      const { teacherEmail } = req.query || {};
 
-      // Find all documents in the "materials" collection
-      // We sort by uploadDate in descending order to show the newest first
+      let query = {};
+      if (teacherEmail) {
+        query = {
+          $or: [
+            { teacherEmail: teacherEmail },
+            { uploadedBy: teacherEmail },
+            { teacherEmail: { $exists: false } },
+            { teacherEmail: '' }
+          ]
+        };
+      }
+
+      // Find documents in the "materials" collection
       const materials = await db
         .collection(materialsCollection)
-        .find({})
+        .find(query)
         .sort({ uploadDate: -1 })
         .toArray();
 

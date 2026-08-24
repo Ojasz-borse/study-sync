@@ -87,7 +87,11 @@ function timeAgo(date: Date): string {
   return `${days} days ago`
 }
 
+import { useSession } from 'next-auth/react'
+
 export function DashboardOverview() {
+  const { data: session } = useSession()
+  const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
   const POLL_MS = 10_000
 
@@ -98,9 +102,16 @@ export function DashboardOverview() {
   const prevCountsRef = useRef<{ materials: number; images: number; notices: number } | null>(null)
 
   const fetchDashboardData = async (signal?: AbortSignal) => {
+    const matUrl = teacherEmail
+      ? `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(teacherEmail)}`
+      : `${BACKEND_URL}/materials`
+    const notUrl = teacherEmail
+      ? `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(teacherEmail)}`
+      : `${BACKEND_URL}/notices`
+
     const [materialsRes, noticesRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/materials`, { signal }),
-      fetch(`${BACKEND_URL}/notices`, { signal }),
+      fetch(matUrl, { signal }),
+      fetch(notUrl, { signal }),
     ])
 
     if (!materialsRes.ok) {

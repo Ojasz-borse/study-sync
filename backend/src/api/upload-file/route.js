@@ -192,15 +192,10 @@ export default (chroma) => async (req, res) => {
     const mongoUri = process.env.MONGODB_URI;
     const dbName = process.env.DB_NAME || process.env.MONGODB_DB || 'studysync';
     const materialsCollection = process.env.COLLECTION_NAME || 'materials';
-    if (!mongoUri) {
-      return res.status(500).json({
-        error: 'MONGODB_URI is missing on the backend; cannot persist uploads',
-      });
-    }
-
     try {
       const client = await clientPromise;
       const db = client.db(dbName);
+      const teacherEmail = req.body?.teacherEmail || req.body?.uploadedBy || '';
 
       const doc = {
         fileName: file.originalname,
@@ -210,6 +205,8 @@ export default (chroma) => async (req, res) => {
         uploadDate: new Date(),
         category,
         fileCategory,
+        teacherEmail: teacherEmail || '',
+        uploadedBy: teacherEmail || '',
         extractedText: documentText,
         // Store raw bytes in MongoDB (<=16MB doc limit; UI hints 10MB)
         fileData: new Binary(buffer),
