@@ -42,7 +42,7 @@ async function readJsonOrText(res: Response) {
 }
 
 export function NoticesSection() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
   const NOTICE_WEBHOOK_URL = 'https://tkb32.app.n8n.cloud/webhook/notice-upload'
@@ -72,7 +72,14 @@ export function NoticesSection() {
     [notices, selectedStatus]
   )
 
-  const fetchNotices = async () => {
+  const fetchNotices = async (emailToUse?: string) => {
+    const targetEmail = emailToUse || teacherEmail
+    if (!targetEmail) {
+      setIsLoading(false)
+      setNotices([])
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     setSuccess(null)
@@ -82,10 +89,7 @@ export function NoticesSection() {
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
     try {
-      const url = teacherEmail
-        ? `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(teacherEmail)}`
-        : `${BACKEND_URL}/notices`
-
+      const url = `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(targetEmail)}`
       const res = await fetch(url, { signal: controller.signal })
       const { raw, json } = await readJsonOrText(res)
       if (!res.ok) {
@@ -105,9 +109,15 @@ export function NoticesSection() {
   }
 
   useEffect(() => {
-    fetchNotices()
+    if (status === 'loading') return
+    if (teacherEmail) {
+      fetchNotices(teacherEmail)
+    } else {
+      setIsLoading(false)
+      setNotices([])
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [BACKEND_URL, teacherEmail])
+  }, [BACKEND_URL, teacherEmail, status])
 
   const handleFormChange = (field: 'title' | 'content' | 'category' | 'priority', value: string) => {
     setFormData(p => ({ ...p, [field]: value }))
@@ -511,7 +521,7 @@ export function NoticesSection() {
               </CardContent>
             </Card>
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={fetchNotices} disabled={isSubmitting}>
+              <Button variant="outline" onClick={() => fetchNotices()} disabled={isSubmitting}>
                 Refresh
               </Button>
               <Button onClick={handleAddNew} className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-md">

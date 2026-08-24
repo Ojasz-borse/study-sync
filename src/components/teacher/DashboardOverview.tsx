@@ -90,7 +90,7 @@ function timeAgo(date: Date): string {
 import { useSession } from 'next-auth/react'
 
 export function DashboardOverview() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
   const POLL_MS = 10_000
@@ -101,13 +101,16 @@ export function DashboardOverview() {
   const [error, setError] = useState<string | null>(null)
   const prevCountsRef = useRef<{ materials: number; images: number; notices: number } | null>(null)
 
-  const fetchDashboardData = async (signal?: AbortSignal) => {
-    const matUrl = teacherEmail
-      ? `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(teacherEmail)}`
-      : `${BACKEND_URL}/materials`
-    const notUrl = teacherEmail
-      ? `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(teacherEmail)}`
-      : `${BACKEND_URL}/notices`
+  const fetchDashboardData = async (signal?: AbortSignal, emailToUse?: string) => {
+    const targetEmail = emailToUse || teacherEmail
+    if (!targetEmail) {
+      setMaterials([])
+      setNotices([])
+      return
+    }
+
+    const matUrl = `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(targetEmail)}`
+    const notUrl = `${BACKEND_URL}/notices?teacherEmail=${encodeURIComponent(targetEmail)}`
 
     const [materialsRes, noticesRes] = await Promise.all([
       fetch(matUrl, { signal }),
@@ -133,13 +136,21 @@ export function DashboardOverview() {
   }
 
   useEffect(() => {
+    if (status === 'loading') return
+    if (!teacherEmail) {
+      setIsLoading(false)
+      setMaterials([])
+      setNotices([])
+      return
+    }
+
     let intervalId: number | null = null
     const controller = new AbortController()
 
     const run = async () => {
       try {
         setError(null)
-        await fetchDashboardData(controller.signal)
+        await fetchDashboardData(controller.signal, teacherEmail)
       } catch (e: any) {
         if (e?.name === 'AbortError') return
         setError(e?.message || 'Failed to load dashboard data')
@@ -155,8 +166,7 @@ export function DashboardOverview() {
       controller.abort()
       if (intervalId) window.clearInterval(intervalId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [BACKEND_URL])
+  }, [teacherEmail, status])
 
   const derivedCounts = useMemo(() => {
     const totalMaterials = materials.length

@@ -40,15 +40,19 @@ export default () => async (req, res) => {
       const { teacherEmail } = req.query || {};
 
       let query = {};
-      if (teacherEmail) {
+      if (teacherEmail && teacherEmail.trim()) {
+        const cleanEmail = teacherEmail.trim().toLowerCase();
         query = {
           $or: [
-            { teacherEmail: teacherEmail },
-            { uploadedBy: teacherEmail },
-            { teacherEmail: { $exists: false } },
-            { teacherEmail: '' }
+            { teacherEmail: cleanEmail },
+            { uploadedBy: cleanEmail },
+            { teacherEmail: teacherEmail.trim() },
+            { uploadedBy: teacherEmail.trim() }
           ]
         };
+      } else {
+        // Strict privacy: if no teacher email provided in teacher dashboard request, return empty list
+        return res.status(200).json([]);
       }
 
       // Find documents in the "materials" collection

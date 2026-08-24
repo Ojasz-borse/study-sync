@@ -37,7 +37,7 @@ interface Material {
 }
 
 export function MaterialsSection() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const teacherEmail = session?.user?.email || ''
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
 
@@ -62,17 +62,21 @@ export function MaterialsSection() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const fetchMaterials = async () => {
+  const fetchMaterials = async (emailToUse?: string) => {
+    const targetEmail = emailToUse || teacherEmail
+    if (!targetEmail) {
+      setIsLoading(false)
+      setMaterials([])
+      return
+    }
+
     try {
       setIsLoading(true)
       const controller = new AbortController()
       const timeoutMs = process.env.NODE_ENV === 'development' ? 10000 : 30000
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-      const url = teacherEmail
-        ? `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(teacherEmail)}`
-        : `${BACKEND_URL}/materials`
-
+      const url = `${BACKEND_URL}/materials?teacherEmail=${encodeURIComponent(targetEmail)}`
       const response = await fetch(url, { signal: controller.signal })
       clearTimeout(timeoutId)
       if (!response.ok) {
@@ -107,6 +111,7 @@ export function MaterialsSection() {
           downloads: item.downloads || 0,
           views: item.views || 0,
           fileURL: item.fileURL,
+          teacherEmail: item.teacherEmail,
         }
       })
       setMaterials(formattedMaterials)
@@ -122,8 +127,14 @@ export function MaterialsSection() {
   }
 
   useEffect(() => {
-    fetchMaterials()
-  }, [])
+    if (status === 'loading') return
+    if (teacherEmail) {
+      fetchMaterials(teacherEmail)
+    } else {
+      setIsLoading(false)
+      setMaterials([])
+    }
+  }, [teacherEmail, status])
 
   const categories = ['all', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Uncategorized']
   const types = ['all', 'pdf', 'image']
@@ -236,7 +247,7 @@ export function MaterialsSection() {
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
-            onClick={fetchMaterials} 
+            onClick={() => fetchMaterials()} 
             disabled={isLoading || isDeleting}
             className="text-gray-600"
           >

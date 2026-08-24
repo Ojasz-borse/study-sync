@@ -10,14 +10,17 @@ export default () => async (req, res) => {
       const { teacherEmail } = req.query || {};
 
       let query = {};
-      if (teacherEmail) {
+      if (teacherEmail && teacherEmail.trim()) {
+        const cleanEmail = teacherEmail.trim().toLowerCase();
         query = {
           $or: [
-            { teacherEmail: teacherEmail },
-            { teacherEmail: { $exists: false } },
-            { teacherEmail: '' }
+            { teacherEmail: cleanEmail },
+            { teacherEmail: teacherEmail.trim() }
           ]
         };
+      } else {
+        // Strict privacy: if no teacher email provided, return empty list
+        return res.status(200).json([]);
       }
 
       const notices = await db

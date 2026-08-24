@@ -42,17 +42,22 @@ const authOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    // JWT callback no longer needs to handle the role.
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
       }
       return token;
     },
-    // Session callback no longer needs to handle the role.
+    // Session callback
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id;
+        if (!session.user) {
+          session.user = { id: token.id, email: token.email };
+        } else {
+          session.user.id = token.id;
+          session.user.email = token.email || session.user.email;
+        }
       }
       return session;
     },
